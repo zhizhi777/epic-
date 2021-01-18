@@ -1,9 +1,12 @@
 import React from "react";
+import Uploader from "../components/Uploader";
+import Tips from "../components/Tips";
 
 function Home(){
   return (
     <>
-      <h1 style={{color: 'red'}}>Home</h1>
+      <Tips>请先登录！</Tips>
+      <Uploader />
     </>
   )
 }

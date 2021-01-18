@@ -1,16 +1,19 @@
 //维护所有登录注册有关的行为和状态 
-import { observable, action } from "mobx";
+import { makeAutoObservable, observable, action } from "mobx";
+import { Auth } from "../models";
+import UserStore from "./user";
+import HistoryStore from "./history";
+import ImageStore from "./image";
+import { message } from "antd";
 
 class AuthStore{
-  @observable isLogin = false
-  @observable isLoding = false
+  constructor() {
+    makeAutoObservable(this)
+}
+
   @observable values = {
     username: '',
     password: ''
-  }
-
-  @action setIsLogin(isLogin){
-    this.isLogin = isLogin
   }
 
   @action setUsername(username){
@@ -22,29 +25,65 @@ class AuthStore{
   }
 
   @action login(){
-    console.log('登录中..')
-    this.isLoding = true
-    setTimeout(()=>{
-      console.log('登录成功')
-      this.isLogin = true
-      this.isLoding = false
-    }, 1000)
+    return new Promise((resolve, reject)=>{
+      Auth.login(this.values.username, this.values.password)
+        .then(user=> {
+          UserStore.pullUser()
+          resolve(user)
+        }).catch(error=> {
+          UserStore.resetUser()
+          switch (error.code) {
+            case -1:
+              message.error('请求已终止，请查看网络连接')
+              break;
+            case 210:
+              message.error('用户名或密码错误')
+            break;
+            case 211:
+              message.error('用户不存在')
+            break;
+            case 219:
+              message.error('登录失败次数超过限制，请稍候再试，或者通过忘记密码重设密码。')
+            break;
+            default:
+              break;
+          }
+          reject(error)
+        })
+    })
   }
 
   @action register(){
-    console.log('注册中..')
-    this.isLoding = true
-    setTimeout(()=>{
-      console.log('注册成功')
-      this.isLogin = true
-      this.isLoding = false
-    }, 1000)
+    return new Promise((resolve, reject)=>{
+      Auth.register(this.values.username, this.values.password)
+    .then(user=> {
+      UserStore.pullUser()
+      resolve(user)
+    })
+    .catch(error=> {
+      UserStore.resetUser()
+      switch (error.code) {
+        case -1:
+          message.error('请求已终止，请查看网络连接')
+          break;
+        case 202:
+          message.error('用户名已存在')
+        break;
+        
+        default:
+          break;
+      }
+      reject(error)
+    })
+    })
   }
 
   @action logOut(){
-    console.log('已注销..')
+    Auth.logOut()
+    UserStore.resetUser()
+    HistoryStore.reset()
+    ImageStore.reset()
   }
-
 }
 
-export { AuthStore }
+export default new AuthStore()
